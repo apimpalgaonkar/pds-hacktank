@@ -627,6 +627,7 @@ func GetnameSpaceID(namespace string, deploymentTargetID string) (string, error)
 			}
 		}
 		return true, nil
+
 	})
 	return namespaceID, nil
 }
