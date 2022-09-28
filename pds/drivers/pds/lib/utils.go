@@ -3,7 +3,6 @@ package pds
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -609,24 +608,30 @@ func RegisterTargetClusterToPDS(tenantID, clusterID, targetClusterName string) e
 // GetnameSpaceID returns the namespace ID
 func GetnameSpaceID(namespace string, deploymentTargetID string) (string, error) {
 	var namespaceID string
-	namespaces, err := components.Namespace.ListNamespaces(deploymentTargetID)
-	for i := 0; i < len(namespaces); i++ {
-		if namespaces[i].GetStatus() == "available" {
-			if namespaces[i].GetName() == namespace {
-				namespaceID = namespaces[i].GetId()
-			}
-			namespaceNameIDMap[namespaces[i].GetName()] = namespaces[i].GetId()
-			log.Infof("Available namespace - Name: %v , Id: %v , Status: %v", namespaces[i].GetName(), namespaces[i].GetId(), namespaces[i].GetStatus())
+
+	err = wait.Poll(timeInterval, timeOut, func() (bool, error) {
+		log.Infof("Listing Available namespace")
+		namespaces, err := components.Namespace.ListNamespaces(deploymentTargetID)
+		if err != nil {
+			log.Errorf("An Error Occured while listing namespaces %v", err)
+			return false, err
 		}
-	}
-	if err != nil {
-		log.Errorf("An Error Occured while listing namespaces %v", err)
-		return "", err
-	}
+		for i := 0; i < len(namespaces); i++ {
+			if namespaces[i].GetStatus() == "available" {
+				if namespaces[i].GetName() == namespace {
+					namespaceID = namespaces[i].GetId()
+				}
+				namespaceNameIDMap[namespaces[i].GetName()] = namespaces[i].GetId()
+				log.Infof("Available namespace - Name: %v , Id: %v , Status: %v", namespaces[i].GetName(), namespaces[i].GetId(), namespaces[i].GetStatus())
+				return true, nil
+			}
+		}
+		return true, nil
+	})
 	return namespaceID, nil
 }
 
-//GetStorageTemplate return the storage template id
+// GetStorageTemplate return the storage template id
 func GetStorageTemplate(tenantID string) (string, error) {
 	log.Infof("Get the storage template")
 	storageTemplates, err := components.StorageSettingsTemplate.ListTemplates(tenantID)
@@ -785,7 +790,7 @@ func GetAllVersionsImages(dataServiceID string) (map[string][]string, map[string
 	return dataServiceNameVersionMap, dataServiceIDImagesMap, nil
 }
 
-//ValidateDataServiceDeployment checks if deployment is healthy and running
+// ValidateDataServiceDeployment checks if deployment is healthy and running
 func ValidateDataServiceDeployment(deployment *pds.ModelsDeployment) error {
 
 	err = wait.Poll(maxtimeInterval, timeOut, func() (bool, error) {
@@ -940,77 +945,4 @@ func CheckNamespace(namespace string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-//GetDeploymentConnectionInfo returns the dns endpoint
-func GetDeploymentConnectionInfo(deploymentID string) (string, error) {
-	var isfound bool
-	var dnsEndpoint string
-
-	dataServiceDeployment := components.DataServiceDeployment
-	deploymentConnectionDetails, clusterDetails, err := dataServiceDeployment.GetConnectionDetails(deploymentID)
-	deploymentConnectionDetails.MarshalJSON()
-	if err != nil {
-		log.Errorf("An Error Occured %v", err)
-		return "", err
-	}
-	deploymentNodes := deploymentConnectionDetails.GetNodes()
-	log.Infof("Deployment nodes %v", deploymentNodes)
-	isfound = false
-	for key, value := range clusterDetails {
-		log.Infof("host details key %v value %v", key, value)
-		if strings.Contains(key, "host") || strings.Contains(key, "nodes") {
-			dnsEndpoint = fmt.Sprint(value)
-			isfound = true
-		}
-	}
-	if !isfound {
-		log.Errorf("No connection string found")
-		return "", err
-	}
-
-	return dnsEndpoint, nil
-}
-
-//GetDeploymentCredentials returns the password to connect to the dataservice
-func GetDeploymentCredentials(deploymentID string) (string, error) {
-	dataServiceDeployment := components.DataServiceDeployment
-	dataServicePassword, err := dataServiceDeployment.GetDeploymentCredentials(deploymentID)
-	if err != nil {
-		log.Errorf("An Error Occured %v", err)
-		return "", err
-	}
-	pdsPassword := dataServicePassword.GetPassword()
-	return pdsPassword, nil
-}
-
-func CheckError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func RunQueryonPG(deploymentID string) {
-	host, err = GetDeploymentConnectionInfo(deploymentID)
-	CheckError(err)
-	password, err = GetDeploymentCredentials(deploymentID)
-	CheckError(err)
-
-	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-
-	db, err := sql.Open("postgres", psqlconn)
-	CheckError(err)
-
-	defer db.Close()
-
-	// insert
-	// hardcoded
-	insertStmt := `insert into "Students"("Name", "Roll") values('John', 1)`
-	_, e := db.Exec(insertStmt)
-	CheckError(e)
-
-	// dynamic
-	insertDynStmt := `insert into "Students"("Name", "Roll") values($1, $2)`
-	_, e = db.Exec(insertDynStmt, "Jane", 2)
-	CheckError(e)
 }

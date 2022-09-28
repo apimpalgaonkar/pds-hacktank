@@ -146,7 +146,4 @@ func main() {
 			log.Fatalf("Error while deploying dataservices %v", err)
 		}
 	}
-
-	pdslib.RunQueryonPG("c14acb0d-502a-44b1-b587-04b29c6e5590")
-
 }
