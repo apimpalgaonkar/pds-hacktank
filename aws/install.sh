@@ -9,7 +9,8 @@ terraform apply -target="aws_iam_policy.portworx_eksblueprint_volumeAccess" --au
 terraform apply -target="module.eks_blueprints" --auto-approve
 terraform apply -target="module.eks_blueprints_kubernetes_addons" --auto-approve
 
-aws eks --region us-east-1 update-kubeconfig --name portworx-eks-iam-policy-hank-tank
+#aws eks --region us-east-1 update-kubeconfig --name portworx-eks-iam-policy-hank-tank
+eval $(terraform output configure_kubectl)
 cat /root/.kube/config > ./kubeconfig
 echo ------ DONE WITH PX INSTALLATION -----
 cat $KUBECONFIG

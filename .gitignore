@@ -1,0 +1,7 @@
+.terraform
+*.tfstate
+*.tfstate.backup
+kubeconfig
+.terraform.lock.hcl
+PDSaaS.sh
+pds/DeployPDS

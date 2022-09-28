@@ -13,6 +13,7 @@ output "region" {
   description = "AWS region"
 }
 
+
 # output "vpc_private_subnet_cidr" {
 #   description = "VPC private subnet CIDR"
 #   value       = module.vpc.private_subnets_cidr_blocks
