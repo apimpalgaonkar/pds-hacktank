@@ -606,31 +606,31 @@ func RegisterTargetClusterToPDS(tenantID, clusterID, targetClusterName string) e
 }
 
 // GetnameSpaceID returns the namespace ID
-func GetnameSpaceID(namespace string, deploymentTargetID string) (string, error) {
-	var namespaceID string
+// func GetnameSpaceID(namespace string, deploymentTargetID string) (string, error) {
+// 	var namespaceID string
 
-	err = wait.Poll(timeInterval, timeOut, func() (bool, error) {
-		log.Infof("Listing Available namespace")
-		namespaces, err := components.Namespace.ListNamespaces(deploymentTargetID)
-		if err != nil {
-			log.Errorf("An Error Occured while listing namespaces %v", err)
-			return false, err
-		}
-		for i := 0; i < len(namespaces); i++ {
-			if namespaces[i].GetStatus() == "available" {
-				if namespaces[i].GetName() == namespace {
-					namespaceID = namespaces[i].GetId()
-					namespaceNameIDMap[namespaces[i].GetName()] = namespaces[i].GetId()
-					log.Infof("Available namespace - Name: %v , Id: %v , Status: %v", namespaces[i].GetName(), namespaces[i].GetId(), namespaces[i].GetStatus())
-					return true, nil
-				}
-			}
-		}
-		return true, nil
+// 	err = wait.Poll(timeInterval, timeOut, func() (bool, error) {
+// 		log.Infof("Listing Available namespace")
+// 		namespaces, err := components.Namespace.ListNamespaces(deploymentTargetID)
+// 		if err != nil {
+// 			log.Errorf("An Error Occured while listing namespaces %v", err)
+// 			return false, err
+// 		}
+// 		for i := 0; i < len(namespaces); i++ {
+// 			if namespaces[i].GetStatus() == "available" {
+// 				if namespaces[i].GetName() == namespace {
+// 					namespaceID = namespaces[i].GetId()
+// 					namespaceNameIDMap[namespaces[i].GetName()] = namespaces[i].GetId()
+// 					log.Infof("Available namespace - Name: %v , Id: %v , Status: %v", namespaces[i].GetName(), namespaces[i].GetId(), namespaces[i].GetStatus())
+// 					return true, nil
+// 				}
+// 			}
+// 		}
+// 		return true, nil
 
-	})
-	return namespaceID, nil
-}
+// 	})
+// 	return namespaceID, nil
+// }
 
 // GetStorageTemplate return the storage template id
 func GetStorageTemplate(tenantID string) (string, error) {
@@ -895,7 +895,7 @@ func DeployDataServices(supportedDataServicesMap map[string]string, projectID, d
 }
 
 // CheckNamespace checks if the namespace is available in the cluster and pds is enabled on it
-func CheckNamespace(namespace string) (bool, error) {
+func CheckNamespace(namespace string) (string, bool, error) {
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -923,16 +923,17 @@ func CheckNamespace(namespace string) (bool, error) {
 			ns, err = clientset.CoreV1().Namespaces().Create(ctx, nsName, metav1.CreateOptions{})
 			if err != nil {
 				log.Errorf("Error while creating namespace %v", err)
-				return false, err
+				return "", false, err
 			}
 			isavailable = true
 		}
 		if !isavailable {
-			return false, err
+			return "", false, err
 		}
 	}
 
 	log.Infof("namspaceID %v ", string(ns.GetObjectMeta().GetUID()))
+	namespaceID := string(ns.GetObjectMeta().GetUID())
 	isavailable = false
 	for key, value := range ns.Labels {
 		log.Infof("key: %v values: %v", key, value)
@@ -942,8 +943,8 @@ func CheckNamespace(namespace string) (bool, error) {
 		}
 	}
 	if !isavailable {
-		return false, nil
+		return "", false, nil
 	}
 
-	return true, nil
+	return namespaceID, true, nil
 }

@@ -81,7 +81,7 @@ func main() {
 		log.Fatalf("Error while deploying data service %v", err)
 	}
 
-	isavailable, err := pdslib.CheckNamespace(namespace)
+	namespaceID, isavailable, err := pdslib.CheckNamespace(namespace)
 	if !isavailable || err != nil {
 		log.Fatalf("namespace check has failed with error %v", err)
 	}
@@ -122,10 +122,10 @@ func main() {
 			log.Fatalf("Error while listing storage template %v", err)
 		}
 
-		namespaceID, err = pdslib.GetnameSpaceID(namespace, deploymentTargetID)
-		if err != nil {
-			log.Fatalf("Error while getting namespace id %v", err)
-		}
+		// namespaceID, err = pdslib.GetnameSpaceID(namespace, deploymentTargetID)
+		// if err != nil {
+		// 	log.Fatalf("Error while getting namespace id %v", err)
+		// }
 
 		deployments, _, _, err = pdslib.DeployDataServices(dataServiceNameIDMap, projectID,
 			deploymentTargetID,
