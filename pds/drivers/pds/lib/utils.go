@@ -620,10 +620,10 @@ func GetnameSpaceID(namespace string, deploymentTargetID string) (string, error)
 			if namespaces[i].GetStatus() == "available" {
 				if namespaces[i].GetName() == namespace {
 					namespaceID = namespaces[i].GetId()
+					namespaceNameIDMap[namespaces[i].GetName()] = namespaces[i].GetId()
+					log.Infof("Available namespace - Name: %v , Id: %v , Status: %v", namespaces[i].GetName(), namespaces[i].GetId(), namespaces[i].GetStatus())
+					return true, nil
 				}
-				namespaceNameIDMap[namespaces[i].GetName()] = namespaces[i].GetId()
-				log.Infof("Available namespace - Name: %v , Id: %v , Status: %v", namespaces[i].GetName(), namespaces[i].GetId(), namespaces[i].GetStatus())
-				return true, nil
 			}
 		}
 		return true, nil
@@ -910,7 +910,7 @@ func CheckNamespace(namespace string) (bool, error) {
 	ns, err = clientset.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	isavailable = false
 	if err != nil {
-		log.Errorf("Error while getting namespace %v", err)
+		log.Warnf("Error while getting namespace %v", err)
 		if strings.Contains(err.Error(), "not found") {
 			nsName := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
